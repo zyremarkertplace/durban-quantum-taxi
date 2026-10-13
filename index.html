@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Durban Quantum Taxi Driver</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;overflow:hidden;background:#83b9df;font-family:Arial,sans-serif;color:white}
+canvas{display:block}
+#hud{position:fixed;top:12px;left:12px;right:12px;display:flex;justify-content:space-between;gap:8px;z-index:2;pointer-events:none}
+.panel{background:#101820dc;border:1px solid #ffffff44;border-radius:12px;padding:10px;font-size:12px}
+.panel b{font-size:15px}
+#mission{position:fixed;top:88px;left:50%;transform:translateX(-50%);background:#123d2be8;border-radius:20px;padding:10px 14px;font-size:12px;font-weight:bold;white-space:nowrap;z-index:2}
+#message{position:fixed;top:130px;left:50%;transform:translateX(-50%);background:#101820d9;border-radius:8px;padding:8px 10px;font-size:11px;z-index:2;text-align:center;max-width:90%;white-space:normal}
+#controls{position:fixed;bottom:20px;left:16px;right:16px;display:flex;justify-content:space-between;align-items:end;z-index:3}
+button{color:white;font-weight:bold;border:2px solid #ffffff66;box-shadow:0 4px 12px #0006;touch-action:none;user-select:none}
+#wheel{width:100px;height:100px;border-radius:50%;background:radial-gradient(circle,#273b48 0 15%,#aab7bf 16% 22%,#23343f 23% 55%,#b8c4cc 56% 64%,#263a46 65%);font-size:11px}
+.pedals{display:flex;gap:10px}
+.pedal{width:66px;height:82px;border-radius:14px;font-size:11px}
+#brake{background:#a62d2d}
+#gas{background:#187f48}
+#start{position:fixed;inset:0;z-index:10;background:#071522df;display:flex;align-items:center;justify-content:center;padding:22px}
+.card{width:100%;max-width:390px;background:#13222eee;border:1px solid #ffffff44;border-radius:20px;padding:24px;box-shadow:0 15px 45px #0008}
+.card h1{font-size:28px;line-height:1.1;margin:14px 0 8px}
+.card p,.card li{font-size:13px;line-height:1.6;color:#d8e5ed}
+.card button{width:100%;padding:15px;background:#16854a;border:0;border-radius:10px;font-size:15px;margin-top:10px}
+.tag{display:inline-block;background:#1a7544;border-radius:20px;padding:6px 10px;font-size:10px;font-weight:bold}
+@media(max-width:360px){#wheel{width:82px;height:82px}.pedal{width:57px;height:72px}.panel{padding:7px}}
+</style>
+</head>
+<body>
+<div id="hud">
+  <div class="panel"><b>DURBAN TAXI DRIVER</b><br>QUANTUM SIMULATOR</div>
+  <div class="panel">FARES<br><b id="cash">R 0</b></div>
+  <div class="panel">SPEED<br><b id="speed">0 km/h</b></div>
+</div>
+<div id="mission">MISSION: PICK UP PASSENGERS</div>
+<div id="message">Drive towards the green pickup marker.</div>
+<div id="controls">
+  <button id="wheel" aria-label="Steering wheel">STEER</button>
+  <div class="pedals">
+    <button id="brake" class="pedal">BRAKE</button>
+    <button id="gas" class="pedal">ACCELERATE</button>
+  </div>
+</div>
+<div id="start">
+  <div class="card">
+    <span class="tag">FIRST PLAYABLE BUILD</span>
+    <h1>Durban Quantum<br>Taxi Driver 🇿🇦</h1>
+    <p>Start your taxi shift in Durban. Drive your minibus, collect passengers and earn fares.</p>
+    <ul>
+      <li>3D-style taxi and road</li>
+      <li>Touchscreen driving controls</li>
+      <li>Passenger pickup missions</li>
+      <li>Earn fares in South African rand</li>
+    </ul>
+    <button id="startBtn">START YOUR SHIFT</button>
+    <p>This is an early prototype. More features will be added step by step.</p>
+  </div>
+</div>
+
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x91c4e5);
+scene.fog=new THREE.Fog(0x91c4e5,65,210);
+
+const camera=new THREE.PerspectiveCamera(65,innerWidth/innerHeight,.1,400);
+const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'low-power'});
+renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));
+renderer.setSize(innerWidth,innerHeight);
+document.body.appendChild(renderer.domElement);
+
+scene.add(new THREE.HemisphereLight(0xffffff,0x64734d,2));
+const sun=new THREE.DirectionalLight(0xfff0d5,2);
+sun.position.set(-20,40,10);
+scene.add(sun);
+
+function material(color){return new THREE.MeshStandardMaterial({color,roughness:.9})}
+function box(w,h,d,color,x,y,z,parent=scene){
+ const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material(color));
+ mesh.position.set(x,y+h/2,z);
+ parent.add(mesh);
+ return mesh;
+}
+
+// Ground and road
+const ground=new THREE.Mesh(new THREE.PlaneGeometry(400,400),material(0x56874c));
+ground.rotation.x=-Math.PI/2;
+ground.position.y=-.12;
+scene.add(ground);
+
+box(13,.12,420,0x343a40,0,0,-150);
+box(.4,.2,420,0xb8b6a8,-6.8,.02,-150);
+box(.4,.2,420,0xb8b6a8,6.8,.02,-150);
+
+for(let z=60;z>-350;z-=12){
+ box(.16,.025,5,0xf4e8be,0,.075,z);
+}
+box(.12,.025,420,0xf4e8be,-5.7,.075,-150);
+box(.12,.025,420,0xf4e8be,5.7,.075,-150);
+
+// Simple Durban-inspired neighbourhood
+const buildingColors=[0xd8bd99,0xd4d8d5,0xe2d4b9,0xb4c9bd,0xd5a39a,0xd9c26e];
+for(let i=0;i<40;i++){
+ const side=i%2===0?-1:1;
+ const z=45-i*9;
+ const x=side*(10+Math.random()*10);
+ const w=5+Math.random()*6;
+ const h=4+Math.random()*10;
+ const d=5+Math.random()*4;
+ box(w,h,d,buildingColors[i%buildingColors.length],x,0,z);
+ box(w*.7,1.3,.08,0x40545a,x,.8,z+d/2+.05);
+}
+
+// Trees
+for(let i=0;i<34;i++){
+ const side=i%2===0?-1:1;
+ const x=side*(8+Math.random()*3);
+ const z=48-i*11;
+ const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.15,.2,1.7,6),material(0x684a2f));
+ trunk.position.set(x,.85,z);
+ scene.add(trunk);
+ const leaves=new THREE.Mesh(new THREE.SphereGeometry(1,7,6),material(0x287244));
+ leaves.position.set(x,2.2,z);
+ leaves.scale.set(1,1.15,1);
+ scene.add(leaves);
+}
+
+// Quantum-style minibus
+const taxi=new THREE.Group();
+scene.add(taxi);
+
+box(2.15,1.1,4.2,0xf2f1e9,0,1.05,0,taxi);
+box(1.98,.8,2.6,0xe9eee9,0,1.95,-.2,taxi);
+
+// Windscreens and side windows
+box(1.85,.58,.06,0x5d8ca4,0,2.03,-1.53,taxi);
+box(1.85,.53,.06,0x5d8ca4,0,2.03,1.05,taxi);
+
+for(const x of [-1.02,1.02]){
+ for(const z of [-1.05,-.15,.7]){
+  box(.06,.48,.62,0x5d8ca4,x,1.95,z,taxi);
+ }
+}
+for(const x of [-1.08,1.08]){
+ for(const z of [-1.35,1.35]){
+  const wheel=new THREE.Mesh(new THREE.CylinderGeometry(.4,.4,.22,12),material(0x17191b));
+  wheel.rotation.z=Math.PI/2;
+  wheel.position.set(x,.45,z);
+  taxi.add(wheel);
+ }
+}
+box(.4,.2,.06,0xfff0bf,-.68,1.1,-2.13,taxi);
+box(.4,.2,.06,0xfff0bf,.68,1.1,-2.13,taxi);
+box(.4,.2,.06,0xc72d28,-.68,1.1,2.13,taxi);
+box(.4,.2,.06,0xc72d28,.68,1.1,2.13,taxi);
+
+taxi.position.set(0,0,8);
+
+// Pickup point
+const pickup=new THREE.Group();
+scene.add(pickup);
+const green=new THREE.MeshStandardMaterial({color:0x20ed78,emissive:0x087a30});
+const ring=new THREE.Mesh(new THREE.TorusGeometry(1,.12,8,24),green);
+ring.rotation.x=Math.PI/2;
+ring.position.y=.15;
+pickup.add(ring);
+const marker=new THREE.Mesh(new THREE.ConeGeometry(.4,1.1,8),green);
+marker.position.y=1;
+pickup.add(marker);
+pickup.position.set(-3.5,0,-42);
+
+let started=false,gas=false,brake=false,steer=0,speed=0,cash=0,cooldown=0;
+const cashEl=document.getElementById('cash');
+const speedEl=document.getElementById('speed');
+const message=document.getElementById('message');
+const mission=document.getElementById('mission');
+
+document.getElementById('startBtn').addEventListener('click',()=>{
+ started=true;
+ document.getElementById('start').style.display='none';
+});
+
+function hold(id,on,off){
+ const el=document.getElementById(id);
+ el.addEventListener('pointerdown',e=>{e.preventDefault();on();});
+ for(const ev of ['pointerup','pointercancel','pointerleave']){
+  el.addEventListener(ev,e=>{e.preventDefault();off();});
+ }
+}
+hold('gas',()=>gas=true,()=>gas=false);
+hold('brake',()=>brake=true,()=>brake=false);
+
+const wheel=document.getElementById('wheel');
+let pointerX=0;
+wheel.addEventListener('pointerdown',e=>{
+ pointerX=e.clientX;
+ wheel.setPointerCapture(e.pointerId);
+});
+wheel.addEventListener('pointermove',e=>{
+ if(e.buttons){
+  steer=Math.max(-1,Math.min(1,(e.clientX-pointerX)/45));
+  wheel.style.transform=`rotate(${steer*40}deg)`;
+ }
+});
+function releaseSteering(){steer=0;wheel.style.transform='rotate(0deg)'}
+for(const ev of ['pointerup','pointercancel','lostpointercapture'])wheel.addEventListener(ev,releaseSteering);
+
+// Keyboard controls for testing on computers
+addEventListener('keydown',e=>{
+ if(e.key==='ArrowUp'||e.key==='w')gas=true;
+ if(e.key==='ArrowDown'||e.key==='s')brake=true;
+ if(e.key==='ArrowLeft'||e.key==='a')steer=-1;
+ if(e.key==='ArrowRight'||e.key==='d')steer=1;
+});
+addEventListener('keyup',e=>{
+ if(e.key==='ArrowUp'||e.key==='w')gas=false;
+ if(e.key==='ArrowDown'||e.key==='s')brake=false;
+ if(['ArrowLeft','ArrowRight','a','d'].includes(e.key))releaseSteering();
+});
+
+const clock=new THREE.Clock();
+function animate(){
+ requestAnimationFrame(animate);
+ const dt=Math.min(clock.getDelta(),.04);
+
+ if(started){
+  if(gas)speed=Math.min(26,speed+dt*8);
+  else speed=Math.max(0,speed-dt*2);
+  if(brake)speed=Math.max(0,speed-dt*18);
+
+  taxi.position.x+=steer*speed*dt*.18;
+  taxi.position.x=Math.max(-4.3,Math.min(4.3,taxi.position.x));
+  taxi.rotation.y=-steer*.1;
+
+  // Roadside scenery scrolls past to simulate forward travel.
+  const travel=speed*dt*.8;
+  scene.traverse(obj=>{
+   if(obj.userData.scenery && obj.position.z>15)obj.position.z-=420;
+  });
+  pickup.position.z+=travel;
+  if(pickup.position.z>18){
+   pickup.position.z=-130-Math.random()*45;
+   pickup.position.x=Math.random()>.5?3.5:-3.5;
+  }
+
+  // Stop near the pickup marker to collect a passenger.
+  if(Math.abs(pickup.position.z-taxi.position.z)<2.8 &&
+     Math.abs(pickup.position.x-taxi.position.x)<2.3 &&
+     speed<2.5 && cooldown<=0){
+   cash+=25;
+   cashEl.textContent='R '+cash;
+   cooldown=2;
+   message.textContent='Passenger collected! You earned R25. Drive to the next pickup.';
+   mission.textContent='FARE COLLECTED: R25';
+   pickup.position.z=-160;
+  }
+  cooldown=Math.max(0,cooldown-dt);
+ }
+ speedEl.textContent=Math.round(speed*3.6)+' km/h';
+ camera.position.set(taxi.position.x*.4,5.2,taxi.position.z+10.5);
+ camera.lookAt(taxi.position.x*.25,1.2,taxi.position.z-5);
+ renderer.render(scene,camera);
+}
+animate();
+
+addEventListener('resize',()=>{
+ camera.aspect=innerWidth/innerHeight;
+ camera.updateProjectionMatrix();
+ renderer.setSize(innerWidth,innerHeight);
+});
+</script>
+</body>
+</html>
